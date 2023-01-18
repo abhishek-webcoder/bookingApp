@@ -46,4 +46,15 @@ router.patch(
 // to delete single booking
 router.delete("/:bookingId", bookingsController.deleteBooking);
 
+// to edit bookingRoom table and delete one entry by booking id and room id
+router.patch(
+  "/room-booking-edit",
+  [
+    check("bookingId").not().isEmpty(),
+    check("roomId").not().isEmpty(),
+    check("roomRemainIds").not().isEmpty(),
+  ],
+  bookingsController.editRoomBooking
+);
+
 module.exports = router;

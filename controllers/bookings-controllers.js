@@ -2,6 +2,7 @@ const { validationResult } = require("express-validator");
 
 const Booking = require("../models/booking");
 const Room = require("../models/room");
+const RoomBooking = require("../models/room-booking");
 
 // to get the booking list
 const getBookings = async (req, res, next) => {
@@ -18,8 +19,8 @@ const getBookings = async (req, res, next) => {
       let finalBookingData = booking.toObject({ getters: true });
       return {
         ...finalBookingData,
-        checkInDate: convertDate(finalBookingData.checkInDate),
-        checkOutDate: convertDate(finalBookingData.checkOutDate),
+        showCheckInDate: convertDate(finalBookingData.checkInDate),
+        showCheckOutDate: convertDate(finalBookingData.checkOutDate),
       };
     }),
   });
@@ -42,8 +43,8 @@ const getBooking = async (req, res, next) => {
   res.json({
     booking: {
       ...finalBookingData,
-      checkInDate: convertDate(finalBookingData.checkInDate),
-      checkOutDate: convertDate(finalBookingData.checkOutDate),
+      showCheckInDate: convertDate(finalBookingData.checkInDate),
+      showCheckOutDate: convertDate(finalBookingData.checkOutDate),
     },
   });
 };
@@ -113,21 +114,20 @@ const addBooking = async (req, res, next) => {
   });
 
   try {
-    // to edit an existing room's availability
-    let updatedRoom = {
-      checkInDate: new Date(checkInDate),
-      checkOutDate: new Date(checkOutDate),
-    };
-    const update = { $set: updatedRoom };
-    const options = {};
-
-    for (let i = 0; i < roomId.length; i++) {
-      const query = { _id: roomId[i] };
-      await Room.updateOne(query, update, options);
-    }
-
     // to add booking after room availability saved
     await createdBooking.save();
+
+    // to edit room's availability
+    for (let i = 0; i < roomId.length; i++) {
+      const createRoomBooking = new RoomBooking({
+        bookingId: createdBooking.id,
+        roomId: roomId[i],
+        checkInDate: new Date(checkInDate),
+        checkOutDate: new Date(checkOutDate),
+      });
+
+      await createRoomBooking.save();
+    }
   } catch (err) {
     return res.status(500).json({
       message: "Booking creation failed, please check your data.",
@@ -179,12 +179,13 @@ const editBooking = async (req, res, next) => {
     checkOutDate,
   } = req.body;
 
-  let room;
+  let roomNums = [];
 
   try {
     // to find room number
     for (let i = 0; i < roomId.length; i++) {
-      room = await Room.find({ _id: roomId[i] });
+      let findRoom = await Room.find({ _id: roomId[i] });
+      roomNums.push(findRoom[0]["roomNum"]);
     }
   } catch (err) {
     return res.status(500).json({
@@ -199,28 +200,31 @@ const editBooking = async (req, res, next) => {
     contactNum,
     noOfGuest,
     roomId,
-    roomNum: room[0].roomNum,
+    roomNum: roomNums,
     checkInDate: new Date(checkInDate),
     checkOutDate: new Date(checkOutDate),
   };
 
   try {
+    //to update exixting booking
     const query = { _id: bookingId };
     const update = { $set: updatedBooking };
     const options = {};
     await Booking.updateOne(query, update, options);
 
-    // to edit an existing room's availability
-    let updatedRoom = {
-      checkInDate: new Date(checkInDate),
-      checkOutDate: new Date(checkOutDate),
-    };
-    const roomupdate = { $set: updatedRoom };
-    const roomoptions = {};
+    // to delete all previously booked room associated with this booking ID
+    await RoomBooking.deleteMany({ bookingId: bookingId });
 
+    // to create new rooms booking with this booking ID
     for (let i = 0; i < roomId.length; i++) {
-      const roomquery = { _id: roomId[i] };
-      await Room.updateOne(roomquery, roomupdate, roomoptions);
+      const updateRoomBooking = new RoomBooking({
+        bookingId: bookingId,
+        roomId: roomId[i],
+        checkInDate: new Date(checkInDate),
+        checkOutDate: new Date(checkOutDate),
+      });
+
+      await updateRoomBooking.save();
     }
   } catch (err) {
     return res.status(500).json({
@@ -237,22 +241,9 @@ const editBooking = async (req, res, next) => {
 const deleteBooking = async (req, res, next) => {
   let bookingId = req.params.bookingId;
 
-  let booking;
   try {
-    // fetch booking logic to reset the room availability
-    booking = await Booking.find({ _id: bookingId });
     // to edit an existing room's availability
-    let updatedRoom = {
-      checkInDate: new Date(Date.now() - 864e5),
-      checkOutDate: new Date(Date.now() - 864e5),
-    };
-    const roomupdate = { $set: updatedRoom };
-    const roomoptions = {};
-
-    for (let i = 0; i < booking[0]["roomId"].length; i++) {
-      const roomquery = { _id: booking[0]["roomId"][i] };
-      await Room.updateOne(roomquery, roomupdate, roomoptions);
-    }
+    await RoomBooking.deleteMany({ bookingId: bookingId });
 
     //delete booking logic
     const query = { _id: bookingId };
@@ -273,8 +264,83 @@ const deleteBooking = async (req, res, next) => {
   }
 };
 
+// to edit bookingRoom table and delete one entry by booking id and room id
+const editRoomBooking = async (req, res, next) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(422).json({
+      message: "Invalid inputs passed, please check your data.",
+    });
+  }
+
+  const { bookingId, roomId, roomRemainIds } = req.body;
+
+  let existingRoomBooking;
+  try {
+    existingRoomBooking = await RoomBooking.findOne({
+      bookingId,
+      roomId,
+    });
+  } catch (err) {
+    return res.status(500).json({
+      message: "Booking Search failed, please check your data.",
+    });
+  }
+
+  if (!existingRoomBooking) {
+    return res.status(422).json({
+      message: "Booking does not exist, please check with admin",
+    });
+  }
+
+  let roomNums = [];
+
+  try {
+    // to find room number
+    for (let i = 0; i < roomRemainIds.length; i++) {
+      let findRoom = await Room.find({ _id: roomRemainIds[i] });
+      roomNums.push(findRoom[0]["roomNum"]);
+    }
+  } catch (err) {
+    return res.status(500).json({
+      message: "Booking edit failed, please check your data.",
+    });
+  }
+
+  try {
+    // update booking table to sync with the next step
+    const updatedBooking = {
+      roomId: roomRemainIds,
+      roomNum: roomNums,
+    };
+
+    const queryroom = { _id: bookingId };
+    const update = { $set: updatedBooking };
+    const options = {};
+    await Booking.updateOne(queryroom, update, options);
+
+    // delete respective booking from roombookings table
+    const query = { bookingId, roomId };
+    const result = await RoomBooking.deleteOne(query);
+    if (result.deletedCount === 1) {
+      res.status(200).json({
+        message: "Room Booking deleted successfully.",
+      });
+    } else {
+      res.status(400).json({
+        message: "There is no booked room for this ID. Nothing to delete!",
+      });
+    }
+  } catch (err) {
+    return res.status(500).json({
+      message: "Room Booking edit failed, please check your data.",
+    });
+  }
+};
+
 exports.getBookings = getBookings;
 exports.getBooking = getBooking;
 exports.addBooking = addBooking;
 exports.editBooking = editBooking;
 exports.deleteBooking = deleteBooking;
+exports.editRoomBooking = editRoomBooking;

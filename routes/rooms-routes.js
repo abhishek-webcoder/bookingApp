@@ -12,22 +12,14 @@ router.post(
   roomsController.getRooms
 );
 
+// to get all the rooms in an array
+router.get("/all-rooms", roomsController.getAllRooms);
+
 // to add a new room
 router.post(
   "/room-add",
-  [
-    check("roomNum").not().isEmpty(),
-    check("checkInDate").not().isEmpty(),
-    check("checkOutDate").not().isEmpty(),
-  ],
+  [check("roomNum").not().isEmpty()],
   roomsController.addRoom
-);
-
-// to edit an existing room
-router.patch(
-  "/room-edit",
-  [check("checkInDate").not().isEmpty(), check("checkOutDate").not().isEmpty()],
-  roomsController.editRoom
 );
 
 module.exports = router;
