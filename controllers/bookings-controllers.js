@@ -65,6 +65,8 @@ const addBooking = async (req, res, next) => {
     contactNum,
     noOfGuest,
     roomId,
+    bookingPrice,
+    advPayment,
     checkInDate,
     checkOutDate,
   } = req.body;
@@ -109,6 +111,8 @@ const addBooking = async (req, res, next) => {
     noOfGuest,
     roomId,
     roomNum: roomNums,
+    bookingPrice,
+    advPayment,
     checkInDate: new Date(checkInDate),
     checkOutDate: new Date(checkOutDate),
   });
@@ -175,6 +179,8 @@ const editBooking = async (req, res, next) => {
     contactNum,
     noOfGuest,
     roomId,
+    bookingPrice,
+    advPayment,
     checkInDate,
     checkOutDate,
   } = req.body;
@@ -201,6 +207,8 @@ const editBooking = async (req, res, next) => {
     noOfGuest,
     roomId,
     roomNum: roomNums,
+    bookingPrice,
+    advPayment,
     checkInDate: new Date(checkInDate),
     checkOutDate: new Date(checkOutDate),
   };
