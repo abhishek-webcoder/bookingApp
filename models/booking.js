@@ -12,6 +12,7 @@ const BookingSchema = new Schema({
   roomNum: { type: Array, default: [] },
   bookingPrice: { type: Number, integer: true, required: true },
   advPayment: { type: Number, integer: true, required: true },
+  rate: { type: String, required: true },
   checkInDate: { type: String, default: Date.now, required: true },
   checkOutDate: { type: String, default: Date.now, required: true },
 });
