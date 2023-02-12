@@ -66,6 +66,7 @@ const addCustomer = async (req, res, next) => {
     checkOutDate,
     totalRate,
     rateChart,
+    advanceAmount,
   } = req.body;
 
   let existingCustomer;
@@ -83,7 +84,7 @@ const addCustomer = async (req, res, next) => {
 
   if (existingCustomer) {
     return res.status(422).json({
-      message: "Customer exists already, please check with admin",
+      message: "Booking exists already, please check with admin",
     });
   }
 
@@ -97,6 +98,7 @@ const addCustomer = async (req, res, next) => {
     checkOutDate: new Date(checkOutDate),
     totalRate,
     rateChart,
+    advanceAmount,
   });
 
   try {
@@ -118,6 +120,7 @@ const addCustomer = async (req, res, next) => {
     checkOutDate: convertDate(createdCustomer.checkOutDate),
     totalRate: createdCustomer.totalRate,
     rateChart: createdCustomer.rateChart,
+    advanceAmount: createdCustomer.advanceAmount,
   });
 };
 
@@ -151,6 +154,7 @@ const editCustomer = async (req, res, next) => {
     checkOutDate,
     totalRate,
     rateChart,
+    advanceAmount,
   } = req.body;
 
   const updatedCustomer = {
@@ -163,6 +167,7 @@ const editCustomer = async (req, res, next) => {
     checkOutDate: new Date(checkOutDate),
     totalRate,
     rateChart,
+    advanceAmount,
   };
 
   try {
@@ -185,6 +190,7 @@ const editCustomer = async (req, res, next) => {
 const deleteCustomer = async (req, res, next) => {
   let customerId = req.params.customerId;
 
+  let customer;
   try {
     const query = { _id: customerId };
     const result = await Customer.deleteOne(query);

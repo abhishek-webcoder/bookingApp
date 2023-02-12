@@ -11,6 +11,7 @@ const CustomerSchema = new Schema({
   checkInDate: { type: String, default: Date.now, required: true },
   checkOutDate: { type: String, default: Date.now, required: true },
   totalRate: { type: Number, integer: true, required: true },
+  advanceAmount: { type: Number, integer: true, required: true },
   rateChart: { type: String, required: true },
 });
 
